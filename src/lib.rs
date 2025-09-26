@@ -81,7 +81,7 @@ impl JitoJsonRpcSDK {
         endpoint: &str,
         method: &str,
         params: Option<Value>,
-    ) -> Result<(Value, String), reqwest::Error> {
+    ) -> Result<(Value, Option<String>), reqwest::Error> {
         let url = format!("{}{}", self.base_url, endpoint);
 
         let data = json!({
@@ -112,8 +112,7 @@ impl JitoJsonRpcSDK {
             .headers()
             .get("x-bundle-id")
             .and_then(|value| value.to_str().ok())
-            .map(String::from)
-            .unwrap_or_default();
+            .map(String::from);
         let body = response.json::<Value>().await?;
         trace!(
             "Response body: {}",
@@ -208,7 +207,7 @@ impl JitoJsonRpcSDK {
             .map_err(|e| anyhow!("Request error: {}", e))
     }
 
-    pub async fn send_txn(&self, params: Option<Value>, bundle_only: bool, uuid: Option<&str>) -> Result<(Value, String), reqwest::Error> {
+    pub async fn send_txn(&self, params: Option<Value>, bundle_only: bool, uuid: Option<&str>) -> Result<(Value, Option<String>), reqwest::Error> {
         let mut query_params = Vec::new();
 
         if bundle_only {
