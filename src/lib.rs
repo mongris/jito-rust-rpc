@@ -161,11 +161,15 @@ impl JitoJsonRpcSDK {
             .map_err(|e| anyhow!("Request error: {}", e))
     }
 
-    pub async fn send_txn(&self, params: Option<Value>, bundle_only: bool) -> Result<Value, reqwest::Error> {
+    pub async fn send_txn(&self, params: Option<Value>, bundle_only: bool, uuid: Option<&str>) -> Result<Value, reqwest::Error> {
         let mut query_params = Vec::new();
 
         if bundle_only {
             query_params.push("bundleOnly=true".to_string());
+        }
+
+        if let Some(uuid) = uuid {
+            query_params.push(format!("uuid={}", uuid));
         }
 
         let endpoint = if query_params.is_empty() {

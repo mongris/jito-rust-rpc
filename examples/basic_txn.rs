@@ -123,7 +123,7 @@ async fn main() -> Result<()> {
     let params = json!({
         "tx": serialized_tx
     });
-    let response = jito_sdk.send_txn(Some(params), false).await?;
+    let response = jito_sdk.send_txn(Some(params), false, None).await?;
 
     // Extract signature from response
     let signature = response["result"]
