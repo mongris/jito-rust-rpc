@@ -76,6 +76,53 @@ impl JitoJsonRpcSDK {
         Ok(body)
     }
 
+    async fn send_request_with_return_bundle_id(
+        &self,
+        endpoint: &str,
+        method: &str,
+        params: Option<Value>,
+    ) -> Result<(Value, String), reqwest::Error> {
+        let url = format!("{}{}", self.base_url, endpoint);
+
+        let data = json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": method,
+            "params": params.unwrap_or(json!([]))
+        });
+
+        trace!("Sending request to: {}", url);
+        trace!(
+            "Request body: {}",
+            serde_json::to_string_pretty(&data).unwrap()
+        );
+
+        let response = self
+            .client
+            .post(&url)
+            .header("Content-Type", "application/json")
+            .json(&data)
+            .send()
+            .await?;
+
+        let status = response.status();
+        debug!("Response status: {}", status);
+
+        let bundle_id = response
+            .headers()
+            .get("x-bundle-id")
+            .and_then(|value| value.to_str().ok())
+            .map(String::from)
+            .unwrap_or_default();
+        let body = response.json::<Value>().await?;
+        trace!(
+            "Response body: {}",
+            serde_json::to_string_pretty(&body).unwrap()
+        );
+
+        Ok((body, bundle_id))
+    }
+
     pub async fn get_tip_accounts(&self) -> Result<Value, reqwest::Error> {
         let endpoint = if let Some(uuid) = &self.uuid {
             format!("/bundles?uuid={}", uuid)
@@ -161,7 +208,7 @@ impl JitoJsonRpcSDK {
             .map_err(|e| anyhow!("Request error: {}", e))
     }
 
-    pub async fn send_txn(&self, params: Option<Value>, bundle_only: bool, uuid: Option<&str>) -> Result<Value, reqwest::Error> {
+    pub async fn send_txn(&self, params: Option<Value>, bundle_only: bool, uuid: Option<&str>) -> Result<(Value, String), reqwest::Error> {
         let mut query_params = Vec::new();
 
         if bundle_only {
@@ -193,7 +240,7 @@ impl JitoJsonRpcSDK {
             _ => json!([]),
         };
 
-        self.send_request(&endpoint, "sendTransaction", Some(params)).await
+        self.send_request_with_return_bundle_id(&endpoint, "sendTransaction", Some(params)).await
     }
 
     pub async fn get_in_flight_bundle_statuses(&self, bundle_uuids: Vec<String>) -> Result<Value> {
